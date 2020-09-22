@@ -21,6 +21,9 @@ import java.util.regex.Pattern;
 
 import static java.net.URLDecoder.decode;
 
+import java.nio.charset.StandardCharsets;
+
+
 /**
  * Parser of HTTP messages' metadata lines, i.e. start-line and header fields.
  * <p>
@@ -359,6 +362,8 @@ public final class HttpMetadataParser {
         String headerName = "";
         boolean parsingValue = false;
         StringBuilder metadataBuilder = new StringBuilder();
+        int headerValuePos = 0;
+        byte[] headerValueBytes = new byte[options.getHttpHeadersOptions().getMaxHeaderValueLength()];
         int length = 0;
         int lengthLimit = options.getHttpHeadersOptions().getMaxHeaderNameLength();
 
@@ -411,6 +416,10 @@ public final class HttpMetadataParser {
                     }
                     if (FieldValues.isAllowedInHeaderValue(c)) {
                         metadataBuilder.append(c);
+                        if(headerValuePos < headerValueBytes.length) {
+                        	headerValueBytes[headerValuePos] = (byte)b;
+                        	headerValuePos++;
+                        }
                     } else {
                         throw createError.apply("Illegal character in HTTP header value", lineNumber);
                     }
@@ -418,7 +427,8 @@ public final class HttpMetadataParser {
             }
         } while ((b = inputStream.read()) >= 0);
 
-        String headerValue = metadataBuilder.toString().trim();
+        //String headerValue = metadataBuilder.toString().trim();
+        String headerValue = new String(headerValueBytes, StandardCharsets.UTF_8).trim();
         return new AbstractMap.SimpleEntry<>(headerName, headerValue);
     }
 
